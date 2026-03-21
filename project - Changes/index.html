@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartAgro | XGBoost Crop Recommendation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #1F7D53;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #4CAF50;
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .results-sidebar {
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateX(-100%);
+            opacity: 0;
+            visibility: hidden;
+        }
+        .results-sidebar.active {
+            transform: translateX(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em 1.25em;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+        }
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased overflow-x-hidden">
+
+    <header id="main-nav" class="sticky top-0 z-50 w-full bg-[#27391C]/95 backdrop-blur-sm border-b border-white/10 shadow-lg font-['Space_Grotesk']">
+        <div class="max-w-[1440px] mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer">
+                <div class="w-12 h-12 flex items-center justify-center relative">
+                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="agroGradient" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#4CAF50"/>
+                                <stop offset="100%" stop-color="#1B5E20"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M12 22L17.2 19V13L12 10L6.8 13V19L12 22Z" fill="#E8F5E9" fill-opacity="0.2" stroke="#2D5A27" stroke-width="0.5"/>
+                        <path d="M12 14C12 14 7 12 5 7C5 3 9 2 12 7V14Z" fill="url(#agroGradient)" />
+                        <path d="M12 14C12 14 17 12 19 7C19 3 15 2 12 7V14Z" fill="#81C784" />
+                        <path d="M12 21V10" stroke="#1B5E20" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="flex flex-col leading-tight hidden sm:block">
+                    <h1 class="text-xl font-bold tracking-tight text-white">
+                        Smart<span class="text-[#1F7D53] font-black">Agro</span>
+                    </h1>
+                    <span class="text-[10px] uppercase tracking-[0.2em] text-[#1F7D53]/80 font-bold">Systems AI</span>
+                </div>
+            </div>
+            <nav class="hidden md:flex items-center gap-1">
+                <a class="px-4 py-2 text-sm font-medium text-[#c1dcb0] hover:text-white hover:bg-white/5 rounded-lg transition-all" href="#">Home</a>
+                <a class="px-4 py-2 text-sm font-medium text-[#c1dcb0] hover:text-white hover:bg-white/5 rounded-lg transition-all" href="#">Analysis</a>
+                <a class="px-4 py-2 text-sm font-medium text-[#c1dcb0] hover:text-white hover:bg-white/5 rounded-lg transition-all" href="#">History</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <button class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+                    <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden ring-1 ring-white/20 group-hover:ring-[#1F7D53]">
+                        <img alt="User profile" class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" />
+                    </div>
+                    <span class="text-sm font-medium text-white hidden lg:block">User Profile</span>
+                    <span class="material-symbols-outlined text-sm text-white/70">expand_more</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div id="toast" class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 shadow-2xl border-emerald-100">
+        <i id="toast-icon" class="fas fa-info-circle text-emerald-500"></i>
+        <span id="toast-message" class="text-sm font-bold text-slate-700"></span>
+    </div>
+
+    <main class="min-h-screen p-4 md:p-10 pt-12">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <!-- Input Panel -->
+                <div id="input-panel" class="lg:col-span-12 transition-all duration-700 ease-in-out">
+                    <div class="glass-card rounded-[2.5rem] p-8 md:p-10">
+                        <div class="flex items-center justify-between mb-10 border-b border-slate-100 pb-6">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-microscope text-[#1F7D53] text-xl"></i>
+                                <h2 class="text-xl font-bold text-slate-800">Field Parameter Analysis</h2>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 bg-[#1F7D53] rounded-full animate-pulse"></span>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">System Ready</span>
+                            </div>
+                        </div>
+
+                        <!-- Section I: NPK -->
+                        <div class="mb-14">
+                            <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                <span class="w-8 h-[2px] bg-slate-200"></span>
+                                I. Soil Nutrients (NPK)
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase">Nitrogen (N)</label>
+                                        <span class="text-xs font-bold bg-emerald-50 text-[#1F7D53] px-2 py-1 rounded-lg" id="val-n">80</span>
+                                    </div>
+                                    <input type="range" id="input-n" min="1" max="600" value="80" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase">Phosphorus (P)</label>
+                                        <span class="text-xs font-bold bg-emerald-50 text-[#1F7D53] px-2 py-1 rounded-lg" id="val-p">50</span>
+                                    </div>
+                                    <input type="range" id="input-p" min="1" max="600" value="50" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase">Potassium (K)</label>
+                                        <span class="text-xs font-bold bg-emerald-50 text-[#1F7D53] px-2 py-1 rounded-lg" id="val-k">100</span>
+                                    </div>
+                                    <input type="range" id="input-k" min="1" max="600" value="100" class="w-full">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section II: Climate & Soil -->
+                        <div class="mb-4">
+                            <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                <span class="w-8 h-[2px] bg-slate-200"></span>
+                                II. Environmental & Soil Properties
+                            </h3>
+
+                            <div class="flex flex-row items-center gap-4 mb-10">
+                                <button id="autofill-btn" class="flex items-center gap-2 px-6 py-3 bg-[#27391C] hover:bg-[#1F7D53] text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex-shrink-0">
+                                    <i class="fas fa-location-crosshairs"></i>
+                                    Sync Live Data
+                                </button>
+                                
+                                <div id="location-display" class="hidden fade-in flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full">
+                                    <i class="fas fa-location-dot text-[#1F7D53] text-[11px]"></i>
+                                    <span id="current-location-text" class="text-[10px] font-black uppercase tracking-tight text-[#1F7D53]"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase">Temperature (°C)</label>
+                                        <span class="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded-lg" id="val-temp">25</span>
+                                    </div>
+                                    <input type="range" id="input-temp" min="0" max="50" value="25" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase">Rainfall (7 Days) (mm)</label>
+                                        <span class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-lg" id="val-rain">23</span>
+                                    </div>
+                                    <input type="range" id="input-rain" min="0" max="500" value="23" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase">Humidity (%)</label>
+                                        <span class="text-xs font-bold bg-cyan-100 text-cyan-700 px-2 py-1 rounded-lg" id="val-hum">70</span>
+                                    </div>
+                                    <input type="range" id="input-hum" min="0" max="100" value="70" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase">Soil pH</label>
+                                        <span class="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded-lg" id="val-ph">6.5</span>
+                                    </div>
+                                    <input type="range" id="input-ph" min="3" max="10" step="0.1" value="6.5" class="w-full">
+                                </div>
+                                <div class="space-y-4 md:col-span-2">
+                                    <label for="soil-select" class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Soil Classification</label>
+                                    <select id="soil-select" class="w-full p-4 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:ring-4 focus:ring-emerald-50 outline-none transition-all cursor-pointer custom-select shadow-sm">
+                                        <option value="Loamy">Loamy</option>
+                                        <option value="Red">Red</option>
+                                        <option value="Forest">Forest</option>
+                                        <option value="Alluvial">Alluvial</option>
+                                        <option value="Laterite">Laterite</option>
+                                        <option value="Mountain">Mountain</option>
+                                        <option value="Sandy Loam">Sandy Loam</option>
+                                        <option value="Saline">Saline</option>
+                                        <option value="Sandy">Sandy</option>
+                                        <option value="Gravelly">Gravelly</option>
+                                        <option value="Arid">Arid</option>
+                                        <option value="Clayey">Clayey</option>
+                                        <option value="Black (Regur)">Black (Regur)</option>
+                                        <option value="Coastal">Coastal</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="predict-btn" class="w-full mt-10 py-5 bg-[#1F7D53] hover:bg-[#2D5A27] text-white font-bold rounded-2xl shadow-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 text-lg">
+                            <i class="fas fa-brain"></i>
+                            Generate Recommendations
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Sidebar -->
+                <div id="results-column" class="hidden lg:col-span-5 transition-all duration-700">
+                    <div class="sticky top-24 space-y-8 results-sidebar" id="results-animated-container">
+                        <div class="glass-card rounded-[2.5rem] p-8 shadow-lg min-h-[600px] flex flex-col border-emerald-50 overflow-hidden">
+                            <div class="flex items-center justify-between mb-8 border-b border-slate-50 pb-4">
+                                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <i class="fas fa-chart-line text-[#1F7D53]"></i>
+                                    Prediction Stack
+                                </h2>
+                                <span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">ML Insights</span>
+                            </div>
+
+                            <div id="result-loading" class="hidden flex-1 flex flex-col items-center justify-center space-y-6">
+                                <div class="w-16 h-16 border-[6px] border-slate-100 border-t-[#1F7D53] rounded-full animate-spin"></div>
+                                <div class="text-center">
+                                    <p class="text-lg font-bold text-slate-700">Analyzing Field Data...</p>
+                                    <p class="text-sm text-slate-400 mt-1">Cross-referencing XGBoost models</p>
+                                </div>
+                            </div>
+
+                            <div id="result-content" class="hidden flex-1 fade-in">
+                                <div class="bg-gradient-to-br from-[#27391C] to-[#1F7D53] rounded-3xl p-8 text-white mb-8 shadow-xl">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Primary Pick</span>
+                                        <i class="fas fa-star text-amber-300"></i>
+                                    </div>
+                                    <h3 id="top-crop-name" class="text-5xl font-black mb-2 leading-tight">...</h3>
+                                    <div class="flex items-center gap-2 font-bold text-emerald-100/90">
+                                        <i class="fas fa-check-double"></i>
+                                        <span id="top-crop-conf">Calculating...</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-4" id="alternative-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const CROP_DATA = [
+            { name: "Rice", n: 80, p: 40, k: 40, temp: 25, rain: 2000, hum: 80, ph: 6.5, soil: "Alluvial" },
+            { name: "Cotton", n: 100, p: 50, k: 50, temp: 30, rain: 800, hum: 60, ph: 7.5, soil: "Black (Regur)" },
+            { name: "Tomato", n: 110, p: 86, k: 118, temp: 18, rain: 700, hum: 74, ph: 6.5, soil: "Alluvial" },
+            { name: "Tea", n: 137, p: 41, k: 67, temp: 25, rain: 2840, hum: 76, ph: 4.5, soil: "Laterite" },
+            { name: "Amla", n: 86, p: 40, k: 48, temp: 41, rain: 960, hum: 58, ph: 7.3, soil: "Saline" },
+            { name: "Strawberry", n: 120, p: 85, k: 130, temp: 15, rain: 1000, hum: 65, ph: 6.0, soil: "Sandy Loam" },
+            { name: "Green Gram", n: 20, p: 45, k: 20, temp: 30, rain: 600, hum: 65, ph: 7.2, soil: "Alluvial" }
+        ];
+
+        const inputIds = ['n', 'p', 'k', 'ph', 'temp', 'hum', 'rain'];
+        const inputs = {};
+        const labels = {};
+        
+        inputIds.forEach(id => {
+            inputs[id] = document.getElementById(`input-${id}`);
+            labels[id] = document.getElementById(`val-${id}`);
+            inputs[id].addEventListener('input', (e) => labels[id].innerText = e.target.value);
+        });
+
+        const soilSelect = document.getElementById('soil-select');
+        const predictBtn = document.getElementById('predict-btn');
+        const autofillBtn = document.getElementById('autofill-btn');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-message');
+
+        const showToast = (message, icon = 'fa-info-circle') => {
+            toastMsg.innerText = message;
+            document.getElementById('toast-icon').className = `fas ${icon} text-[#1F7D53]`;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        };
+
+        const classifySoil = (props, lat, lon) => {
+            const { clayRaw, sandRaw, siltRaw, ph } = props;
+            
+            // Normalize g/kg to Percentage (SoilGrids returns values like 400 for 40%)
+            const clay = (clayRaw || 0) / 10;
+            const sand = (sandRaw || 0) / 10;
+            const silt = (siltRaw || 0) / 10;
+
+            if (ph > 8.2) return "Saline";
+            if (ph < 5.0) return "Laterite";
+            // Specific check for Deccan plateau/India Black soil region
+            if (lat > 15 && lat < 25 && lon > 73 && lon < 80) return "Black (Regur)";
+            
+            if (clay > 40) return "Clayey";
+            if (sand > 85) return "Sandy";
+            if (sand > 50 && clay > 20) return "Sandy Loam";
+            if (silt > 50) return "Alluvial"; 
+            if (ph < 6.0 && (lat > 30 || lat < -30)) return "Forest";
+
+            return "Loamy";
+        };
+
+        autofillBtn.addEventListener('click', async () => {
+            if (!navigator.geolocation) {
+                showToast("Location not supported", "fa-triangle-exclamation");
+                return;
+            }
+
+            autofillBtn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Syncing...`;
+            autofillBtn.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                const formatDate = (d) => d.toISOString().split('T')[0];
+                const end = new Date();
+                const start = new Date(); 
+                start.setDate(end.getDate() - 7);
+                
+                const weatherUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=${formatDate(start)}&end_date=${formatDate(end)}&daily=temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean&timezone=auto`;
+                const soilUrl = `https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${longitude}&lat=${latitude}&property=clay&property=sand&property=silt&property=phh2o&depth=0-5cm&value=mean`;
+                const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`;
+
+                try {
+                    const results = await Promise.allSettled([
+                        fetch(weatherUrl).then(r => r.json()),
+                        fetch(soilUrl).then(r => r.json()),
+                        fetch(geoUrl, { headers: { 'User-Agent': 'SmartAgro-Web-Client' } }).then(r => r.json())
+                    ]);
+
+                    const [weather, soil, geo] = results;
+
+                    // 1. Weather Data Extraction
+                    let weatherData = { temp: "25", hum: "70", rain: "23" };
+                    if (weather.status === 'fulfilled' && weather.value.daily) {
+                        const d = weather.value.daily;
+                        weatherData.temp = (d.temperature_2m_mean.filter(v => v != null).reduce((a,b)=>a+b,0) / d.temperature_2m_mean.length).toFixed(1);
+                        weatherData.hum = (d.relative_humidity_2m_mean.filter(v => v != null).reduce((a,b)=>a+b,0) / d.relative_humidity_2m_mean.length).toFixed(0);
+                        weatherData.rain = Math.min(500, d.precipitation_sum.reduce((a,b)=>a+b,0)).toFixed(1);
+                    }
+
+                    // 2. Soil Data Extraction
+                    let finalDetectedSoil = "Loamy";
+                    let finalPh = "6.5";
+                    if (soil.status === 'fulfilled' && soil.value.properties) {
+                        const layers = soil.value.properties.layers;
+                        const getPropMean = (name) => {
+                            const l = layers.find(x => x.name === name);
+                            return (l && l.depths && l.depths[0].values) ? l.depths[0].values.mean : null;
+                        };
+
+                        const clayRaw = getPropMean('clay');
+                        const sandRaw = getPropMean('sand');
+                        const siltRaw = getPropMean('silt');
+                        const phRaw = getPropMean('phh2o');
+
+                        if (phRaw !== null) {
+                            finalPh = (phRaw / 10).toFixed(1);
+                            finalDetectedSoil = classifySoil({
+                                clayRaw, sandRaw, siltRaw,
+                                ph: parseFloat(finalPh)
+                            }, latitude, longitude);
+                        }
+                    }
+
+                    // 3. UI UPDATES (EXPLICIT)
+                    // Update Sliders and Labels
+                    const updateUIElement = (id, value) => {
+                        const input = inputs[id];
+                        const label = labels[id];
+                        if (input && label) {
+                            input.value = value;
+                            label.innerText = value;
+                            // Manually dispatch event to trigger any internal logic
+                            input.dispatchEvent(new Event('input'));
+                        }
+                    };
+
+                    updateUIElement('temp', weatherData.temp);
+                    updateUIElement('hum', weatherData.hum);
+                    updateUIElement('rain', weatherData.rain);
+                    updateUIElement('ph', finalPh);
+
+                    // Update Dropdown
+                    if (soilSelect) {
+                        soilSelect.value = finalDetectedSoil;
+                        soilSelect.dispatchEvent(new Event('change'));
+                    }
+
+                    // 4. Location & Summary Update
+                    if (geo.status === 'fulfilled' && geo.value.address) {
+                        const a = geo.value.address;
+                        const locString = a.city || a.town || a.village || a.county || "Field Detected";
+                        document.getElementById('current-location-text').innerText = locString;
+                        document.getElementById('location-display').classList.remove('hidden');
+                        showToast(`Sync Complete: pH ${finalPh}, ${finalDetectedSoil} soil`, "fa-circle-check");
+                    }
+
+                } catch (err) {
+                    showToast("Sync encountered an error", "fa-triangle-exclamation");
+                } finally {
+                    autofillBtn.innerHTML = `<i class="fas fa-location-crosshairs"></i> Sync Live Data`;
+                    autofillBtn.disabled = false;
+                }
+            }, (err) => {
+                showToast("Location Access Denied", "fa-lock");
+                autofillBtn.innerHTML = `<i class="fas fa-location-crosshairs"></i> Sync Live Data`;
+                autofillBtn.disabled = false;
+            }, { timeout: 15000 });
+        });
+
+        predictBtn.addEventListener('click', () => {
+            const inputPanel = document.getElementById('input-panel');
+            const resultsCol = document.getElementById('results-column');
+            const resContainer = document.getElementById('results-animated-container');
+            const resLoading = document.getElementById('result-loading');
+            const resContent = document.getElementById('result-content');
+
+            if (resultsCol.classList.contains('hidden')) {
+                resultsCol.classList.remove('hidden');
+                inputPanel.className = "lg:col-span-7 transition-all duration-700 ease-in-out";
+                setTimeout(() => resContainer.classList.add('active'), 50);
+            }
+
+            resContent.classList.add('hidden');
+            resLoading.classList.remove('hidden');
+
+            setTimeout(() => {
+                const current = {
+                    n: parseFloat(inputs.n.value), p: parseFloat(inputs.p.value), k: parseFloat(inputs.k.value), 
+                    ph: parseFloat(inputs.ph.value), temp: parseFloat(inputs.temp.value), 
+                    hum: parseFloat(inputs.hum.value), rain: parseFloat(inputs.rain.value) * 50, 
+                    soil: soilSelect.value
+                };
+
+                const scored = CROP_DATA.map(crop => {
+                    let penalty = (Math.abs(current.n - crop.n)/600)*0.2 + (Math.abs(current.temp - crop.temp)/50)*0.2 + (Math.abs(current.rain - crop.rain)/3000)*0.3;
+                    if (current.soil !== crop.soil) penalty += 0.25;
+                    let conf = Math.max(15, (1 - penalty) * 100);
+                    return { ...crop, confidence: Math.min(99.4, conf) };
+                }).sort((a,b) => b.confidence - a.confidence);
+
+                document.getElementById('top-crop-name').innerText = scored[0].name;
+                document.getElementById('top-crop-conf').innerText = `${scored[0].confidence.toFixed(1)}% Confidence`;
+                
+                const altList = document.getElementById('alternative-list');
+                altList.innerHTML = '';
+                scored.slice(1, 4).forEach((crop, idx) => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm fade-in";
+                    row.style.animationDelay = `${(idx+1)*100}ms`;
+                    row.innerHTML = `<span class="font-bold text-slate-700">${crop.name}</span><span class="text-sm font-black text-[#1F7D53]">${crop.confidence.toFixed(1)}%</span>`;
+                    altList.appendChild(row);
+                });
+
+                resLoading.classList.add('hidden');
+                resContent.classList.remove('hidden');
+            }, 1200);
+        });
+    </script>
+</body>
+</html>
