@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartAgri | AI Crop Recommendation</title>
+    <title>SmartAgri | Crop Recommendation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -19,7 +19,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .results-sidebar { transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); transform: translateX(-100%); opacity: 0; visibility: hidden; }
         .results-sidebar.active { transform: translateX(0); opacity: 1; visibility: visible; }
-        .custom-select { appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.25em 1.25em; }
         #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 1000; }
         #toast.show { transform: translateX(-50%) translateY(0); }
     </style>
@@ -44,14 +43,14 @@
                 </div>
                 <div class="flex flex-col leading-tight">
                     <h1 class="text-xl font-bold text-white">Smart<span class="text-[#4CAF50]">Agri</span></h1>
-                    <span class="text-[10px] uppercase text-white/60 font-bold">USing XGBoost</span>
+                    <span class="text-[10px] uppercase text-white/60 font-bold">Using XGBoost</span>
                 </div>
             </div>
             <nav class="hidden md:flex items-center gap-1">
                 <a class="px-4 py-2 text-sm font-medium text-[#c1dcb0] hover:text-white" href="#">Predict</a>
                 <a class="px-4 py-2 text-sm font-medium text-[#c1dcb0] hover:text-white" href="#">History</a>
             </nav>
-            <div id="user-display" class="text-white text-[10px] font-mono opacity-50 hidden lg:block">Connecting...</div>
+            <div id="user-display" class="text-white text-[10px] font-mono opacity-50 hidden lg:block">Connected</div>
         </div>
     </header>
 
@@ -78,16 +77,16 @@
                             <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">I. Soil Nutrients (NPK)</h3>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <div class="space-y-4">
-                                    <div class="flex justify-between"><label class="text-[10px] font-black">Nitrogen (N)</label><span id="val-n" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">80</span></div>
-                                    <input type="range" id="input-n" min="1" max="300" value="80" class="w-full">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Nitrogen (N) - kg/ha</label><span id="val-n" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">80</span></div>
+                                    <input type="range" id="input-n" min="0" max="500" value="80" class="w-full">
                                 </div>
                                 <div class="space-y-4">
-                                    <div class="flex justify-between"><label class="text-[10px] font-black">Phosphorus (P)</label><span id="val-p" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">50</span></div>
-                                    <input type="range" id="input-p" min="1" max="300" value="50" class="w-full">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Phosphorus (P) - kg/ha</label><span id="val-p" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">50</span></div>
+                                    <input type="range" id="input-p" min="0" max="500" value="50" class="w-full">
                                 </div>
                                 <div class="space-y-4">
-                                    <div class="flex justify-between"><label class="text-[10px] font-black">Potassium (K)</label><span id="val-k" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">100</span></div>
-                                    <input type="range" id="input-k" min="1" max="300" value="100" class="w-full">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Potassium (K) - kg/ha</label><span id="val-k" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">100</span></div>
+                                    <input type="range" id="input-k" min="0" max="500" value="100" class="w-full">
                                 </div>
                             </div>
                         </div>
@@ -96,7 +95,7 @@
                         <div>
                             <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">II. Environmental & Soil Properties</h3>
                             <div class="flex gap-4 mb-8">
-                                <button id="autofill-btn" class="px-6 py-3 bg-[#27391C] hover:bg-[#1F7D53] text-white text-[10px] font-black uppercase rounded-xl transition-all">
+                                <button style="display:none" id="autofill-btn" class="px-6 py-3 bg-[#27391C] hover:bg-[#1F7D53] text-white text-[10px] font-black uppercase rounded-xl transition-all">
                                     <i class="fas fa-location-crosshairs mr-2"></i>Sync Live Data
                                 </button>
                                 <div id="location-display" class="hidden flex items-center gap-2 px-4 py-2 bg-emerald-50 border rounded-full">
@@ -107,38 +106,20 @@
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                                 <div class="space-y-4">
-                                    <div class="flex justify-between"><label class="text-[10px] font-black">Temperature (°C)</label><span id="val-temp" class="text-xs font-bold bg-orange-50 px-2 py-1 rounded">25</span></div>
-                                    <input type="range" id="input-temp" min="0" max="50" value="25" class="w-full">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Average Temperature (°C)</label><span id="val-temp" class="text-xs font-bold bg-orange-50 px-2 py-1 rounded">25</span></div>
+                                    <input type="range" id="input-temp" min="0" max="50" step="0.1" value="25" class="w-full">
                                 </div>
                                 <div class="space-y-4">
-                                    <div class="flex justify-between"><label class="text-[10px] font-black">Rainfall (mm)</label><span id="val-rain" class="text-xs font-bold bg-blue-50 px-2 py-1 rounded">1200</span></div>
-                                    <input type="range" id="input-rain" min="0" max="1500" value="1200" class="w-full">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Annual Rainfall (mm)</label><span id="val-rain" class="text-xs font-bold bg-blue-50 px-2 py-1 rounded">200</span></div>
+                                    <input type="range" id="input-rain" min="0" max="3500" value="200" class="w-full">
                                 </div>
                                 <div class="space-y-4">
-                                    <div class="flex justify-between"><label class="text-[10px] font-black">Humidity (%)</label><span id="val-hum" class="text-xs font-bold bg-cyan-50 px-2 py-1 rounded">70</span></div>
-                                    <input type="range" id="input-hum" min="0" max="100" value="70" class="w-full">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Relative Humidity (%)</label><span id="val-hum" class="text-xs font-bold bg-cyan-50 px-2 py-1 rounded">70</span></div>
+                                    <input type="range" id="input-hum" min="0" max="100" step="0.1" value="70" class="w-full">
                                 </div>
                                 <div class="space-y-4">
-                                    <div class="flex justify-between"><label class="text-[10px] font-black">Soil pH</label><span id="val-ph" class="text-xs font-bold bg-amber-50 px-2 py-1 rounded">6.5</span></div>
-                                    <input type="range" id="input-ph" min="3" max="10" step="0.1" value="6.5" class="w-full">
-                                </div>
-                                <div class="space-y-4">
-                                    <label class="text-[10px] font-black uppercase">Soil Classification</label>
-                                    <select id="soil-select" class="w-full p-4 rounded-2xl border bg-white text-sm font-bold custom-select outline-none">
-                                        <option value="Loamy">Loamy</option>
-                                        <option value="Red">Red</option><option value="Forest">Forest</option>
-                                        <option value="Alluvial">Alluvial</option><option value="Laterite">Laterite</option>
-                                        <option value="Black (Regur)">Black (Regur)</option><option value="Sandy">Sandy</option>
-                                    </select>
-                                </div>
-                                <div class="space-y-4">
-                                    <label class="text-[10px] font-black uppercase">Season Context</label>
-                                    <select id="season-select" class="w-full p-4 rounded-2xl border bg-white text-sm font-bold custom-select outline-none">
-                                        <option value="Kharif">Kharif</option>
-                                        <option value="Rabi">Rabi</option>
-                                        <option value="Zaid">Zaid</option>
-                                        <option value="Perennial">Perennial</option>
-                                    </select>
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Soil pH Value</label><span id="val-ph" class="text-xs font-bold bg-amber-50 px-2 py-1 rounded">6.5</span></div>
+                                    <input type="range" id="input-ph" min="1" max="14" step="0.1" value="6.5" class="w-full">
                                 </div>
                             </div>
                         </div>

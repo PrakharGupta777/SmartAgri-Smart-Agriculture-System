@@ -1,62 +1,56 @@
 # train_model.py
 import pandas as pd
-import xgboost as xgb
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import joblib
 
 print("⏳ Loading dataset...")
-# 1. Load the dataset
-df = pd.read_csv("crop_recommend_dataset.csv")
+# Load the new dataset
+df = pd.read_csv("merged_crop_dataset.csv")
 
-# 2. Separate features (X) and target (y)
-# We drop 'ID' because it's not a predictive feature
-X = df.drop(columns=['ID', 'Crop Name'])
-y = df['Crop Name']
+print("🧹 Preparing data...")
+# Drop any potential empty rows
+df = df.dropna()
 
-# 3. Encode the target labels (Crop Names -> Numbers)
+# 1. Define Features (X) and Target (y)
+# The target column in the new dataset is 'label'
+X = df.drop(columns=['label'])
+y = df['label']
+
+# Encode the target crop labels into numbers
 label_encoder = LabelEncoder()
 y_encoded = label_encoder.fit_transform(y)
 
-# 4. Define categorical and numerical columns
-categorical_cols = ['Soil Type', 'Season']
-numeric_cols = ['N (kg/ha)', 'P (kg/ha)', 'K (kg/ha)', 'Temp (°C)', 'Rain (mm)', 'Hum (%)', 'pH']
-
-# 5. Create a preprocessor to One-Hot Encode the text columns (Soil, Season)
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', 'passthrough', numeric_cols),
-        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_cols)
-    ])
-
-# 6. Build the Pipeline: Preprocessing -> XGBoost
+# 2. Build the Pipeline
+# Since all features (N, P, K, temperature, humidity, ph, rainfall) are numeric now,
+# we no longer need the OneHotEncoder or ColumnTransformer.
 model_pipeline = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('classifier', xgb.XGBClassifier(
-        n_estimators=100, 
-        learning_rate=0.1,
-        max_depth=6,
-        random_state=42, 
-        eval_metric='mlogloss'
+    ('classifier', RandomForestClassifier(
+        n_estimators=200, 
+        max_depth=12,         # Restrict depth to force generalization
+        random_state=42
     ))
 ])
 
-# 7. Split data into training and testing sets
+# 3. Split the data into Training and Testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
 
-print("🧠 Training XGBoost Model...")
-# 8. Train the model
+print("🧠 Training Model...")
 model_pipeline.fit(X_train, y_train)
 
-# 9. Test the accuracy
+# 4. Evaluate the model
 y_pred = model_pipeline.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
-print(f"✅ Model trained successfully! Accuracy: {accuracy * 100:.2f}%")
+print(f"✅ Training Complete! Model Accuracy: {accuracy * 100:.2f}%")
 
-# 10. Save the pipeline and the label encoder to files
+# 5. Save the trained model and encoder
+# Saving as 'xgboost_pipeline.pkl' so it seamlessly integrates with your existing model.py backend
+print("💾 Saving files...")
 joblib.dump(model_pipeline, 'xgboost_pipeline.pkl')
 joblib.dump(label_encoder, 'label_encoder.pkl')
-print("💾 Model saved as 'xgboost_pipeline.pkl' and 'label_encoder.pkl'")
+
+print("🚀 All Done! You can now start the Flask server.")

@@ -15,17 +15,15 @@ const showToast = (message, icon = 'fa-info-circle') => {
 };
 
 predictBtn.addEventListener('click', async () => {
-    // 1. Gather Payload from Inputs
+    // 1. Gather Payload from Inputs (Aligned strictly with dataset features and types)
     const payload = {
-        nitrogen: parseInt(document.getElementById('input-n').value),
-        phosphorus: parseInt(document.getElementById('input-p').value),
-        potassium: parseInt(document.getElementById('input-k').value),
+        N: parseInt(document.getElementById('input-n').value),
+        P: parseInt(document.getElementById('input-p').value),
+        K: parseInt(document.getElementById('input-k').value),
         temperature: parseFloat(document.getElementById('input-temp').value),
-        humidity: parseInt(document.getElementById('input-hum').value),
-        rainfall: parseInt(document.getElementById('input-rain').value),
+        humidity: parseFloat(document.getElementById('input-hum').value),
         ph: parseFloat(document.getElementById('input-ph').value),
-        soilType: document.getElementById('soil-select').value,
-        season: document.getElementById('season-select').value
+        rainfall: parseFloat(document.getElementById('input-rain').value)
     };
 
     // 2. Button Loading State
@@ -34,7 +32,7 @@ predictBtn.addEventListener('click', async () => {
     predictBtn.disabled = true;
 
     // 3. UI Reveal Logic
-    // FIX: Shrink the input panel from 12 columns to 7 to make room for the 5-column sidebar
+    // Shrink the input panel from 12 columns to 7 to make room for the 5-column sidebar
     const inputPanel = document.getElementById('input-panel');
     inputPanel.classList.remove('lg:col-span-12');
     inputPanel.classList.add('lg:col-span-7');
