@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartAgri | Crop Recommendation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Tailwind Configuration to support the new nav colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'surface-nav': '#27391C',
+                        'primary': '#4CAF50',
+                        'text-muted': '#94a3b8'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        
+        /* Updated Glass Card with Mouse Tracking support */
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.2); 
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05); 
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Optional Spotlight Effect for Glass Cards using the JS variables */
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(76, 175, 80, 0.05) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .glass-card:hover::before { opacity: 1; }
+
+        input[type="range"] { -webkit-appearance: none; height: 6px; background: #e2e8f0; border-radius: 5px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #1F7D53; cursor: pointer; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); background: #4CAF50; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .results-sidebar { transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); transform: translateX(-100%); opacity: 0; visibility: hidden; }
+        .results-sidebar.active { transform: translateX(0); opacity: 1; visibility: visible; }
+        #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 1000; }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        
+        /* Nav Scrolled State */
+        .nav-scrolled {
+            background-color: rgba(39, 57, 28, 0.98) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased overflow-x-hidden">
+
+    <!-- NEW INTEGRATED NAV BAR -->
+    <header id="main-nav" class="sticky top-0 z-50 w-full bg-surface-nav/95 backdrop-blur-sm border-b border-white/10 shadow-lg transition-all duration-300 font-['Space_Grotesk']">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2">
+            
+            <div class="flex items-center gap-2 sm:gap-3 group cursor-pointer shrink-0">
+                <div class="high-profile-logo w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center relative">
+                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="agroGradient" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#4CAF50"/>
+                                <stop offset="100%" stop-color="#1B5E20"/>
+                            </linearGradient>
+                            <filter id="softShadow" x="-2" y="-2" width="28" height="28">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="0.5"/>
+                                <feOffset dx="0" dy="1" result="offsetblur"/>
+                                <feComponentTransfer>
+                                    <feFuncA type="linear" slope="0.3"/>
+                                </feComponentTransfer>
+                                <feMerge>
+                                    <feMergeNode/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <path d="M12 22L17.2 19V13L12 10L6.8 13V19L12 22Z" fill="#E8F5E9" fill-opacity="0.2" stroke="#2D5A27" stroke-width="0.5"/>
+                        <path filter="url(#softShadow)" d="M12 14C12 14 7 12 5 7C5 3 9 2 12 7V14Z" fill="url(#agroGradient)" />
+                        <path filter="url(#softShadow)" d="M12 14C12 14 17 12 19 7C19 3 15 2 12 7V14Z" fill="#81C784" />
+                        <path d="M12 21V10" stroke="#1B5E20" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="flex flex-col leading-tight hidden md:block">
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">
+                        Smart<span class="text-primary font-black">Agri</span>
+                    </h1>
+                    <span class="text-[8px] sm:text-[10px] uppercase tracking-[0.2em] text-primary/80 font-bold">Systems AI</span>
+                </div>
+            </div>
+
+            <nav class="flex items-center gap-4 sm:gap-8 px-2">
+                <a href="/dashboard?name=<%= typeof userName !== 'undefined' ? userName : 'Guest' %>" class="text-primary font-medium text-sm sm:text-base transition-colors hover:text-green-400 whitespace-nowrap">Home</a>
+                <a href="/about?name=<%= typeof userName !== 'undefined' ? userName : 'Guest' %>" class="text-text-muted hover:text-primary transition-colors duration-200 font-medium text-sm sm:text-base whitespace-nowrap">About Us</a>
+            </nav>
+            
+            <div class="flex items-center shrink-0">
+                <div class="relative group">
+                    <button class="profile-btn flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-xl hover:bg-white/5 transition-all">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold ring-2 ring-white/20 group-hover:ring-primary transition-all overflow-hidden">
+                            <% if (typeof userName !== 'undefined' && userName) { %>
+                                <span class="text-base sm:text-lg uppercase"><%= userName.charAt(0) %></span>
+                            <% } else { %>
+                                <span class="material-symbols-outlined text-sm sm:text-base">person</span>
+                            <% } %>
+                        </div>
+                        <span class="text-sm font-medium text-white hidden lg:block"><%= typeof userName !== 'undefined' ? userName : 'Guest' %></span>
+                        <span class="material-symbols-outlined text-sm text-white/70">expand_more</span>
+                    </button>
+
+                    <div class="absolute right-0 mt-2 w-48 bg-surface-nav border border-white/10 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                        <a href="/auth/logout" class="flex items-center gap-3 px-4 py-3 text-sm text-text-muted hover:text-white hover:bg-white/5 transition-colors">
+                            <span class="material-symbols-outlined text-sm">logout</span>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- END NAV BAR -->
+
+    <div id="toast" class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 shadow-2xl border-emerald-100">
+        <i id="toast-icon" class="fas fa-info-circle text-emerald-500"></i>
+        <span id="toast-message" class="text-sm font-bold text-slate-700"></span>
+    </div>
+
+    <main class="min-h-screen p-4 md:p-10 pt-12">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <!-- Input Panel -->
+                <div id="input-panel" class="lg:col-span-12 transition-all duration-700">
+                    <div class="glass-card rounded-[2.5rem] p-8 md:p-10">
+                        <div class="flex items-center justify-between mb-10 border-b pb-6">
+                            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                                <i class="fas fa-microscope text-[#1F7D53]"></i>
+                                Field Parameter Analysis
+                            </h2>
+                        </div>
+
+                        <!-- Soil Nutrients -->
+                        <div class="mb-14">
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">I. Soil Nutrients (NPK)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div class="space-y-4">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Nitrogen (N) - kg/ha</label><span id="val-n" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">80</span></div>
+                                    <input type="range" id="input-n" min="0" max="500" value="139" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Phosphorus (P) - kg/ha</label><span id="val-p" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">50</span></div>
+                                    <input type="range" id="input-p" min="0" max="500" value="63" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Potassium (K) - kg/ha</label><span id="val-k" class="text-xs font-bold bg-emerald-50 px-2 py-1 rounded">100</span></div>
+                                    <input type="range" id="input-k" min="0" max="500" value="50" class="w-full">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Environmental -->
+                        <div>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">II. Environmental & Soil Properties</h3>
+                            <div class="flex gap-4 mb-8">
+                                <button style="display:none" id="autofill-btn" class="px-6 py-3 bg-[#27391C] hover:bg-[#1F7D53] text-white text-[10px] font-black uppercase rounded-xl transition-all">
+                                    <i class="fas fa-location-crosshairs mr-2"></i>Sync Live Data
+                                </button>
+                                <div id="location-display" class="hidden flex items-center gap-2 px-4 py-2 bg-emerald-50 border rounded-full">
+                                    <i class="fas fa-location-dot text-[#1F7D53] text-[11px]"></i>
+                                    <span id="current-location-text" class="text-[10px] font-black text-[#1F7D53]"></span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                                <div class="space-y-4">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Average Temperature (°C)</label><span id="val-temp" class="text-xs font-bold bg-orange-50 px-2 py-1 rounded">25</span></div>
+                                    <input type="range" id="input-temp" min="0" max="50" step="0.1" value="22" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Annual Rainfall (mm)</label><span id="val-rain" class="text-xs font-bold bg-blue-50 px-2 py-1 rounded">200</span></div>
+                                    <input type="range" id="input-rain" min="0" max="3500" value="707" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Relative Humidity (%)</label><span id="val-hum" class="text-xs font-bold bg-cyan-50 px-2 py-1 rounded">70</span></div>
+                                    <input type="range" id="input-hum" min="0" max="100" step="0.1" value="50.7" class="w-full">
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between"><label class="text-[10px] font-black">Soil pH Value</label><span id="val-ph" class="text-xs font-bold bg-amber-50 px-2 py-1 rounded">6.5</span></div>
+                                    <input type="range" id="input-ph" min="1" max="14" step="0.1" value="6.5" class="w-full">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="predict-btn" class="w-full mt-10 py-5 bg-[#1F7D53] hover:bg-[#2D5A27] text-white font-bold rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3 text-lg">
+                            <i class="fas fa-brain"></i>
+                            Analyze and Predict
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Sidebar -->
+                <div id="results-column" class="hidden lg:col-span-5 transition-all duration-700">
+                    <div class="sticky top-24 results-sidebar" id="results-animated-container">
+                        <div class="glass-card rounded-[2.5rem] p-8 shadow-lg min-h-[500px] flex flex-col border-emerald-50">
+                            <div class="flex items-center justify-between mb-8 border-b pb-4">
+                                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-chart-line text-[#1F7D53]"></i>Model Prediction</h2>
+                            </div>
+
+                            <div id="result-loading" class="hidden flex-1 flex flex-col items-center justify-center space-y-4">
+                                <div class="w-12 h-12 border-4 border-slate-100 border-t-[#1F7D53] rounded-full animate-spin"></div>
+                                <p class="text-sm font-bold text-slate-500">Querying Backend...</p>
+                            </div>
+
+                            <div id="result-content" class="hidden flex-1 fade-in">
+                                <div class="bg-gradient-to-br from-[#27391C] to-[#1F7D53] rounded-3xl p-8 text-white mb-8 shadow-xl">
+                                    <span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase">Top Recommendation</span>
+                                    <h3 id="top-crop-name" class="text-4xl font-black mt-4 mb-2">...</h3>
+                                    <div id="top-crop-conf" class="text-emerald-100 font-bold text-sm">...</div>
+                                </div>
+                                <div id="alternative-list" class="space-y-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- For fetching parameters from external sources through API -->
+    <script type="module" src="parameter_api_fetching.js"></script>
+
+    <!-- Data sharing logic between UI and Backend -->
+    <script type="module" src="data_share.js"></script>
+
+    <!-- Dynamic UI Logic & Nav Integration -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 1. Dynamic UI Logic for Sliders ---
+            const controls = [
+                { slider: 'input-n', display: 'val-n' },
+                { slider: 'input-p', display: 'val-p' },
+                { slider: 'input-k', display: 'val-k' },
+                { slider: 'input-temp', display: 'val-temp' },
+                { slider: 'input-rain', display: 'val-rain' },
+                { slider: 'input-hum', display: 'val-hum' },
+                { slider: 'input-ph', display: 'val-ph' }
+            ];
+
+            controls.forEach(item => {
+                const sliderEl = document.getElementById(item.slider);
+                const displayEl = document.getElementById(item.display);
+
+                if (sliderEl && displayEl) {
+                    displayEl.innerText = sliderEl.value;
+                    sliderEl.addEventListener('input', () => {
+                        displayEl.innerText = sliderEl.value;
+                    });
+                }
+            });
+
+            // --- 2. Glass Card Mouse Tracking Effect ---
+            document.querySelectorAll('.glass-card').forEach(card => {
+                card.addEventListener('mousemove', e => {
+                    const rect = card.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / card.clientWidth) * 100;
+                    const y = ((e.clientY - rect.top) / card.clientHeight) * 100;
+                    card.style.setProperty('--mouse-x', `${x}%`);
+                    card.style.setProperty('--mouse-y', `${y}%`);
+                });
+            });
+
+            // --- 3. Scroll Header Logic ---
+            const mainNav = document.getElementById('main-nav');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    mainNav.classList.add('nav-scrolled');
+                } else {
+                    mainNav.classList.remove('nav-scrolled');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
